@@ -1,0 +1,6 @@
+dj_database_url==3.0.1
+Django==5.2.8
+vgunicorn
+psycopg2-binary
+dj-database_url
+whitenoise

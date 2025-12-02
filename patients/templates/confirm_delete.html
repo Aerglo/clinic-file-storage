@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6">
+        <div class="card shadow border-danger">
+            <div class="card-header bg-danger text-white">
+                <h4 class="mb-0">⚠️ هشدار حذف پرونده</h4>
+            </div>
+            <div class="card-body text-center p-4">
+                <p class="fs-5">آیا مطمئن هستید می‌خواهید پرونده <strong>{{ patient.name }}</strong> را پاک کنید؟</p>
+                <p class="text-muted small">این عملیات غیرقابل بازگشت است و فایل مربوطه هم پاک خواهد شد.</p>
+
+                <form method="post" class="mt-4">
+                    {% csrf_token %}
+                    <a href="{% url 'patient_list' %}" class="btn btn-secondary px-4">انصراف</a>
+                    <button type="submit" class="btn btn-danger px-4">بله، حذف کن</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

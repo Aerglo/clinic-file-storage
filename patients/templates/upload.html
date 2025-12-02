@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>سامانه ثبت تصاویر نقشه مغزی</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet"
+        type="text/css" />
+
+    <style>
+        body {
+            font-family: 'Vazirmatn', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            padding: 15px;
+            /* فاصله کم از لبه گوشی */
+        }
+
+        .main-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+            width: 100%;
+            max-width: 480px;
+            /* حداکثر عرض در دسکتاپ */
+            overflow: hidden;
+            border: none;
+        }
+
+        .card-header-custom {
+            background-color: #0d6efd;
+            padding: 30px 20px;
+            text-align: center;
+            color: white;
+        }
+
+        .card-body-custom {
+            padding: 40px;
+        }
+
+        /* --- استایل‌های مخصوص موبایل (Responsive) --- */
+        @media (max-width: 576px) {
+            .main-card {
+                border-radius: 15px;
+                /* گردی کمتر در موبایل */
+            }
+
+            .card-header-custom {
+                padding: 20px 15px;
+                /* هدر جمع‌وجورتر */
+            }
+
+            .card-header-custom h3 {
+                font-size: 1.3rem;
+                /* فونت تیتر متناسب با موبایل */
+            }
+
+            .card-body-custom {
+                padding: 25px 20px;
+                /* فضای داخلی کمتر برای استفاده مفید از صفحه */
+            }
+
+            .form-control {
+                font-size: 16px;
+                /* جلوگیری از زوم خودکار آیفون روی ورودی‌ها */
+            }
+        }
+
+        .form-label {
+            font-weight: 700;
+            color: #444;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+
+        .form-control {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+        }
+
+        .form-control:focus {
+            background-color: #fff;
+            border-color: #0d6efd;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+        }
+
+        .btn-submit {
+            background-color: #0d6efd;
+            border: none;
+            padding: 14px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 12px;
+            width: 100%;
+            /* دکمه تمام عرض */
+        }
+
+        .btn-submit:active {
+            transform: scale(0.98);
+            /* افکت کلیک با انگشت */
+        }
+
+        .footer-text {
+            text-align: center;
+            margin-top: 20px;
+            color: #adb5bd;
+            font-size: 0.75rem;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="main-card">
+        <div class="card-header-custom">
+            <h3>🧠 ثبت نقشه مغزی</h3>
+            <p style="margin-top: 5px; opacity: 0.9; font-size: 0.9rem; margin-bottom: 0;">سامانه پرونده الکترونیک</p>
+        </div>
+
+        <div class="card-body-custom">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+
+                {% if form.errors %}
+                <div class="alert alert-danger p-2 text-center" role="alert"
+                    style="border-radius: 10px; font-size: 0.85rem;">
+                    لطفاً اطلاعات را بررسی کنید.
+                </div>
+                {% endif %}
+
+                {% for field in form %}
+                <div class="mb-3">
+                    <label class="form-label">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.errors %}
+                    <div class="text-danger small mt-1">
+                        {{ field.errors.0 }}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-primary btn-submit">
+                        ذخیره اطلاعات
+                    </button>
+                </div>
+            </form>
+
+            <div class="footer-text">
+                طراحی و اجرا: مهندس نیما
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>
