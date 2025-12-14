@@ -14,29 +14,29 @@ from pathlib import Path
 import os
 import dj_database_url
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
+
+
+
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-test-key')
 
-# SECURITY WARNING: don't run with debug turned on in production!
-# DEBUG = os.environ.get('DEBUG', 'False') == 'True'
+
+
 
 DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
 
-# Application definition
+
 
 INSTALLED_APPS = [
-    "unfold",  # <--- اینو بذار اولِ اول
-    "unfold.contrib.filters",  # فیلترهای خوشگل
+    "unfold",  
+    "unfold.contrib.filters",  
     "unfold.contrib.forms",
     'django.contrib.admin',
     'django.contrib.auth',
@@ -44,7 +44,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    #my apps
+    
     'patients',
     'users',
     'django_cleanup.apps.CleanupConfig',
@@ -73,6 +73,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'patients.context_processors.sms_credit_balance'
             ],
         },
     },
@@ -81,16 +82,16 @@ TEMPLATES = [
 WSGI_APPLICATION = 'clinic.wsgi.application'
 
 
-# Database
-# https://docs.djangoproject.com/en/5.2/ref/settings/#databases
+
+
 
 DATABASES = {
     'default': dj_database_url.config(default='sqlite:///db.sqlite3')
 }
 
 
-# Password validation
-# https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
+
+
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -108,8 +109,8 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
-# Internationalization
-# https://docs.djangoproject.com/en/5.2/topics/i18n/
+
+
 
 LANGUAGE_CODE = 'en-us'
 
@@ -120,38 +121,38 @@ USE_I18N = True
 USE_TZ = True
 
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.2/howto/static-files/
+
+
 
 STATIC_URL = 'static/'
 
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
+
+
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-###########
+
 
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 
-LOGIN_URL = 'login'           # اگه لاگین نبود بره اینجا
-LOGIN_REDIRECT_URL = 'patient_list'  # بعد از لاگین بره اینجا
-LOGOUT_REDIRECT_URL = 'login' # بعد از خروج بره اینجا
+LOGIN_URL = 'login'           
+LOGIN_REDIRECT_URL = 'patient_list'  
+LOGOUT_REDIRECT_URL = 'login' 
 
 UNFOLD = {
-    # --- 1. عنوان و تیترها ---
+    
     "SITE_TITLE": "سامانه QEEG",
     "SITE_HEADER": "پنل مدیریت کلینیک",
-    "SITE_URL": "/", # وقتی روی لوگو کلیک کرد کجا بره (صفحه اصلی)
-    # "SITE_ICON": {
-    #     "light": lambda request: static("images/logo-light.svg"),  # اگه لوگو داشتی
-    #     "dark": lambda request: static("images/logo-dark.svg"),
-    # },
+    "SITE_URL": "/", 
+    
+    
+    
+    
 
-    # --- 2. رنگ‌بندی (تمِ آبیِ پزشکی) ---
-    # این کدها رنگِ اصلی (Primary) پنل رو آبیِ خوش‌رنگ می‌کنه
+    
+    
     "COLORS": {
         "primary": {
             "50": "239 246 255",
@@ -159,7 +160,7 @@ UNFOLD = {
             "200": "191 219 254",
             "300": "147 197 253",
             "400": "96 165 250",
-            "500": "59 130 246", # رنگ اصلی دکمه‌ها
+            "500": "59 130 246", 
             "600": "37 99 235",
             "700": "29 78 216",
             "800": "30 64 175",
@@ -167,24 +168,29 @@ UNFOLD = {
         },
     },
 
-    # --- 3. تنظیماتِ منوی بغل (Sidebar) ---
+    
     "SIDEBAR": {
-        "show_search": True,  # باکسِ سرچِ سریعِ بالا
-        "show_all_applications": True, # نشون دادنِ اتوماتیکِ مدل‌ها (مثل Patient)
+        "show_search": True,  
+        "show_all_applications": True, 
         
-        # می‌تونی لینک‌هایِ سفارشی هم بذاری:
+        
         "navigation": [
             {
                 "title": "دسترسی سریع",
-                "separator": True, # یه خطِ جداکننده می‌ندازه
+                "separator": True, 
                 "items": [
                     {
                         "title": "مشاهده سایت",
-                        "icon": "desktop_windows", # آیکون‌های گوگل (Material Icons)
-                        "link": "patient_list", # اسمِ URL صفحه‌یِ لیستت رو بذار اینجا
+                        "icon": "desktop_windows", 
+                        "link": "patient_list", 
                     },
                 ],
             },
         ],
     },
 }
+
+
+SMS_API_KEY = '1Y7Cew52CazJ4SsuIiE3LZaYxofiRZTMconkkUkATpgUbMtM'
+SMS_LINE_NUMBER = 9982008947  # عدد (Integer)
+SMS_BASE_URL = "https://api.sms.ir/v1/"

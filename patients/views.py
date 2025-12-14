@@ -1,39 +1,97 @@
 
 
 from django.shortcuts import render, redirect
-from .forms import UploadForm 
+from .forms import UploadForm, ManualSMSForm
 from django.shortcuts import render, redirect, get_object_or_404
 from django.db.models import Q 
 from .models import Patient
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse
+import requests
+from django.contrib import messages  # این برای نوتیفیکیشن‌هاست
+from django.conf import settings
+
+def send_sms_with_sms_ir(phone_number, text_message):
+    try:
+        # اطلاعات محرمانه (از کدی که دادی برداشتم)
+        url = f"{settings.SMS_BASE_URL}send/bulk"
+        
+        headers = {
+            "X-API-KEY": settings.SMS_API_KEY,  # <--- خواندن از تنظیمات
+            "Content-Type": "application/json",
+            "Accept": "text/plain"
+        }
+        
+        payload = {
+            "lineNumber": settings.SMS_LINE_NUMBER, # <--- خواندن از تنظیمات
+            "messageText": text_message,
+            "mobiles": [phone_number],
+            "sendDateTime": None
+        }
+
+        response = requests.post(url, json=payload, headers=headers)
+        
+        if response.status_code == 200 and response.json().get('status') == 1:
+            print(f"✅ SMS sent via Line {settings.SMS_LINE_NUMBER}")
+            return True
+        else:
+            print(f"❌ SMS Failed: {response.text}")
+            return False
+            
+    except Exception as e:
+        print(f"⚠️ Error: {e}")
+        return False
 
 @login_required
 def upload_patient_file(request):
     if request.method == 'POST':
-        
         form = UploadForm(request.POST, request.FILES)
         if form.is_valid():
             new_patient = form.save()
             
-            # حالا ریدایرکت می‌کنیم به صفحه جزئیات (با استفاده از ID بیمار جدید)
+            # --- شروع ماجرای پیامک ---
+            
+            # الف) ساخت لینک کامل (همراه با https و دامنه سایت)
+            # اینجا از اسم 'secure_download' یا هر اسمی که تو urls.py برای اون ویوی گیت گذاشتی استفاده کن
+            # اگه اسم ویوی دانلودت چیز دیگه‌س، اینجا عوضش کن
+            full_link = request.build_absolute_uri(
+                reverse('download_gate', args=[new_patient.unique_id])
+            )
+            
+            # ب) ارسال پیامک (اگر شماره داشت)
+            if new_patient.phone_number:
+                msg = f"بیمار گرامی {new_patient.name}،\nنقشه مغزی شما آماده است.\nلینک دریافت:\n{full_link}\nOFF11"
+                
+                is_sent = send_sms_with_sms_ir(new_patient.phone_number, msg)
+                
+                if is_sent:
+                    messages.success(request, f'✅ پرونده ذخیره و پیامک برای {new_patient.name} ارسال شد.')
+                else:
+                    messages.warning(request, '⚠️ پرونده ذخیره شد اما پیامک ارسال نشد (مشکل پنل).')
+            else:
+                messages.success(request, '✅ پرونده با موفقیت ذخیره شد (بدون شماره موبایل).')
+
+            # --- پایان ماجرا ---
+
             return redirect('patient_detail', pk=new_patient.pk)
     else:
-        
         form = UploadForm()
 
     return render(request, 'upload.html', {'form': form})
 
+# ==========================================
+# 3. لیست بیماران (با قابلیت جستجوی شماره)
+# ==========================================
 @login_required
 def patient_list(request):
     query = request.GET.get('q') 
     if query:
-        
         patients = Patient.objects.filter(
-            Q(name__icontains=query) | Q(national_code__icontains=query)
+            Q(name__icontains=query) | 
+            Q(national_code__icontains=query) |
+            Q(phone_number__icontains=query) # <--- این خط جدید اضافه شد
         ).order_by('-uploaded_at')
     else:
-        
         patients = Patient.objects.all().order_by('-uploaded_at')
     
     return render(request, 'patient_list.html', {'patients': patients})
@@ -104,3 +162,31 @@ def delete_patient(request, pk):
         return redirect('patient_list')
         
     return render(request, 'confirm_delete.html', {'patient': patient})
+
+@login_required
+def send_manual_sms(request):
+    # لیست بیماران رو می‌گیریم برای پیشنهاد دادن شماره
+    patients = Patient.objects.filter(phone_number__isnull=False).values('name', 'phone_number')
+    
+    if request.method == 'POST':
+        form = ManualSMSForm(request.POST)
+        if form.is_valid():
+            phone = form.cleaned_data['phone_number']
+            msg = form.cleaned_data['message']
+            
+            # استفاده از همون تابع کمکی که قبلا نوشتیم
+            is_sent = send_sms_with_sms_ir(phone, msg)
+            
+            if is_sent:
+                messages.success(request, f'✅ پیامک با موفقیت به {phone} ارسال شد.')
+                return redirect('send_manual_sms') # رفرش صفحه
+            else:
+                messages.error(request, '⛔ ارسال پیامک با خطا مواجه شد. اعتبار یا اینترنت را چک کنید.')
+    else:
+        form = ManualSMSForm()
+
+    return render(request, 'manual_sms.html', {
+        'form': form,
+        'patients': patients, # اینو می‌فرستیم برای دیتالیست
+        'title': '📩 ارسال پیامک تکی'
+    })

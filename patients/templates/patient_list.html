@@ -1,4 +1,5 @@
-{% extends 'base.html' %} {% block title %}لیست بیماران{% endblock %}
+{% extends 'base.html' %}
+{% block title %}لیست بیماران{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
@@ -14,7 +15,7 @@
         <div class="card border-0 shadow-sm mb-4">
             <div class="card-body">
                 <form method="get" class="d-flex gap-2">
-                    <input type="text" name="q" class="form-control" placeholder="جستجو نام یا کد ملی..."
+                    <input type="text" name="q" class="form-control" placeholder="جستجو نام، کد ملی یا شماره تماس..."
                         value="{{ request.GET.q|default:'' }}">
                     <button type="submit" class="btn btn-dark">جستجو</button>
                     {% if request.GET.q %}
@@ -32,12 +33,31 @@
 
                     <a href="{% url 'patient_detail' patient.pk %}"
                         class="d-flex align-items-center text-decoration-none text-dark" style="flex-grow: 1;">
+
                         <div class="me-3">
-                            <span class="fs-4">👤</span>
+                            <div class="bg-light rounded-circle d-flex justify-content-center align-items-center"
+                                style="width: 50px; height: 50px;">
+                                <span class="fs-4">👤</span>
+                            </div>
                         </div>
+
                         <div>
                             <h5 class="mb-1 fw-bold">{{ patient.name }}</h5>
-                            <div class="text-muted small">کد ملی: <span class="fw-bold">{{patient.national_code}}</span>
+
+                            <div class="text-muted small mt-1">
+                                <span class="d-inline-block me-3">
+                                    🪪 <span class="fw-bold">{{ patient.national_code }}</span>
+                                </span>
+
+                                <span class="d-none d-sm-inline border-end mx-2"></span>
+
+                                {% if patient.phone_number %}
+                                <span class="d-inline-block" dir="ltr">
+                                    📱 <span class="text-secondary fw-bold">{{ patient.phone_number }}</span>
+                                </span>
+                                {% else %}
+                                <span class="text-muted opacity-50">📵 بدون شماره</span>
+                                {% endif %}
                             </div>
                         </div>
                     </a>
@@ -45,7 +65,7 @@
                     <div class="text-end d-flex align-items-center gap-2">
 
                         <span class="badge bg-light text-dark border d-none d-md-inline-block me-2">
-                            {{ patient.uploaded_at|date:"Y/m/d" }}
+                            📅 {{ patient.uploaded_at|date:"Y/m/d" }}
                         </span>
 
                         <a href="{% url 'patient_detail' patient.pk %}" class="btn btn-sm btn-outline-primary"

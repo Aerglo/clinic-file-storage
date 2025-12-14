@@ -15,7 +15,9 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            height: 100vh;
+            min-height: 100vh;
+            /* تغییر به min-height برای موبایل */
+            padding: 15px;
         }
     </style>
 </head>
@@ -23,24 +25,50 @@
 <body>
 
     <div class="card shadow text-center p-4" style="width: 100%; max-width: 500px; border-radius: 15px;">
-        <h2 class="mb-1">{{ patient.name }}</h2>
-        <p class="text-muted">کد ملی: {{ patient.national_code }}</p>
+
+        <div class="mb-3">
+            <span style="font-size: 3rem;">✅</span>
+        </div>
+
+        <h2 class="mb-2 fw-bold">{{ patient.name }}</h2>
+
+        <div class="bg-light p-3 rounded mb-3 border">
+            <p class="text-muted mb-1">
+                کد ملی: <span class="fw-bold text-dark">{{ patient.national_code }}</span>
+            </p>
+
+            {% if patient.phone_number %}
+            <p class="text-muted mb-0" dir="ltr">
+                <a href="tel:{{ patient.phone_number }}" class="text-decoration-none text-secondary">
+                    📱 <span class="fw-bold text-dark">{{ patient.phone_number }}</span>
+                </a>
+            </p>
+            {% else %}
+            <p class="text-muted mb-0 small opacity-75">📵 شماره موبایل ثبت نشده</p>
+            {% endif %}
+        </div>
 
         <hr>
 
         <div class="my-4">
-            <label class="form-label fw-bold">🔗 لینک دانلود پرونده:</label>
+            <label class="form-label fw-bold text-primary">🔗 لینک اختصاصی بیمار:</label>
             <div class="input-group">
-                <input type="text" class="form-control" value="{{ full_link }}" id="linkBox" readonly
+                <input type="text" class="form-control bg-white" value="{{ full_link }}" id="linkBox" readonly
                     style="direction: ltr; text-align: left;">
-                <button class="btn btn-success" onclick="copyLink()">کپی کن</button>
+                <button class="btn btn-success" onclick="copyLink()">کپی</button>
             </div>
-            <div id="copyMsg" class="text-success small mt-2" style="display:none;">لینک کپی شد! ✅</div>
+            <div id="copyMsg" class="alert alert-success py-1 mt-2 small" style="display:none;">
+                لینک با موفقیت کپی شد! 👌
+            </div>
         </div>
 
         <div class="d-grid gap-2">
-            <a href="{{ patient.file.url }}" target="_blank" class="btn btn-outline-primary">👁 مشاهده فایل</a>
-            <a href="{% url 'patient_list' %}" class="btn btn-link text-muted">بازگشت به لیست</a>
+            <a href="{{ patient.file.url }}" target="_blank" class="btn btn-primary py-2">
+                📂 مشاهده فایل آپلود شده
+            </a>
+            <a href="{% url 'patient_list' %}" class="btn btn-outline-secondary">
+                بازگشت به لیست بیماران
+            </a>
         </div>
     </div>
 
@@ -49,13 +77,15 @@
             var copyText = document.getElementById("linkBox");
             copyText.select();
             copyText.setSelectionRange(0, 99999); // برای موبایل
-            navigator.clipboard.writeText(copyText.value);
 
-            // نمایش پیام موفقیت
-            document.getElementById("copyMsg").style.display = "block";
-            setTimeout(function () {
-                document.getElementById("copyMsg").style.display = "none";
-            }, 2000);
+            navigator.clipboard.writeText(copyText.value).then(() => {
+                // نمایش پیام موفقیت
+                var msg = document.getElementById("copyMsg");
+                msg.style.display = "block";
+                setTimeout(function () {
+                    msg.style.display = "none";
+                }, 2500);
+            });
         }
     </script>
 

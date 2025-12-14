@@ -9,5 +9,6 @@ class Patient(models.Model):
     file = models.FileField(upload_to='qeeg_files/')
     uploaded_at = models.DateTimeField(auto_now_add=True)
     unique_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    phone_number = models.CharField(max_length=11, verbose_name="شماره تماس")
     def __str__(self):
         return self.name

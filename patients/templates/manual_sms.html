@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+
+        <div class="card shadow-sm border-0 rounded-4">
+            <div class="card-header bg-primary text-white p-4 rounded-top-4 text-center">
+                <h4 class="mb-0">📩 ارسال پیامک سفارشی</h4>
+                <p class="small opacity-75 mb-0 mt-1">ارسال پیام به بیماران یا شماره دلخواه</p>
+            </div>
+
+            <div class="card-body p-4">
+                <form method="post">
+                    {% csrf_token %}
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">📱 گیرنده:</label>
+                        {{ form.phone_number }}
+                        <div class="form-text text-muted">
+                            می‌توانید شماره جدید وارد کنید یا از لیست پیشنهادی انتخاب کنید.
+                        </div>
+
+                        <datalist id="patient-list">
+                            {% for p in patients %}
+                            <option value="{{ p.phone_number }}">{{ p.name }}</option>
+                            {% endfor %}
+                        </datalist>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">📝 متن پیام:</label>
+                        {{ form.message }}
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-success py-3 fw-bold rounded-3">
+                            🚀 ارسال پیامک
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="text-center mt-3">
+            <a href="{% url 'patient_list' %}" class="text-decoration-none text-muted">
+                بازگشت به لیست پرونده‌ها
+            </a>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

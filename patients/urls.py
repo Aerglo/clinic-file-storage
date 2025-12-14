@@ -14,4 +14,5 @@ urlpatterns = [
     path('download/<uuid:unique_id>/', views.download_gate, name='secure_download'),
     path('patient/<int:pk>/update/', views.update_patient, name='update_patient'),
     path('patient/<int:pk>/delete/', views.delete_patient, name='delete_patient'),
+    path('send-sms/', views.send_manual_sms, name='send_manual_sms'),
 ]

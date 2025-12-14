@@ -19,23 +19,63 @@
         }
 
         .main-container {
-            padding: 30px;
+            padding: 30px 15px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        /* انیمیشن برای نوتیفیکیشن */
+        .alert {
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            border: none;
+        }
+
+        /* هاور برای لینک‌های نوبار */
+        .nav-link:hover {
+            color: #0d6efd !important;
         }
     </style>
 </head>
 
 <body>
 
-    <nav class="navbar navbar-expand-lg navbar-light px-4">
+    <nav class="navbar navbar-expand-lg navbar-light px-4 sticky-top">
         <div class="container-fluid">
-            <a class="navbar-brand fw-bold text-primary" href="{% url 'patient_list' %}">🏥 پنل QEEG</a>
+
+            <a class="navbar-brand fw-bold text-primary fs-4" href="{% url 'patient_list' %}">
+                🏥 پنل QEEG
+            </a>
 
             {% if user.is_authenticated %}
-            <div class="d-flex align-items-center">
-                <span class="me-3 text-muted small">کاربر: {{ user.username }}</span>
-                <form action="{% url 'logout' %}" method="post" class="d-inline">
+
+            <div class="d-flex me-auto ms-auto">
+                <a class="nav-link fw-bold text-dark d-flex align-items-center gap-2 px-3"
+                    href="{% url 'send_manual_sms' %}" style="transition: 0.3s;">
+                    📨 <span class="d-none d-sm-inline">ارسال پیامک دستی</span>
+                </a>
+            </div>
+
+            <div class="d-flex align-items-center gap-3">
+
+                {% if sms_balance %}
+                <span class="badge bg-warning text-dark border shadow-sm py-2 px-3 d-none d-md-inline-block"
+                    title="اعتبار پنل پیامک">
+                    💳 اعتبار: {{ sms_balance }} پیامک
+                </span>
+                {% endif %}
+
+                <div class="vr d-none d-md-block" style="height: 20px;"></div>
+
+                <div class="d-flex align-items-center">
+                    <span class="text-muted small ms-2 d-none d-sm-inline">کاربر:</span>
+                    <span class="fw-bold small">{{ user.username }}</span>
+                </div>
+
+                <form action="{% url 'logout' %}" method="post" class="d-inline m-0">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-outline-danger">خروج</button>
+                    <button type="submit" class="btn btn-sm btn-outline-danger ms-2" title="خروج از حساب">
+                        🚪
+                    </button>
                 </form>
             </div>
             {% endif %}
@@ -43,8 +83,31 @@
     </nav>
 
     <div class="container main-container">
+
+        {% if messages %}
+        <div class="mb-4">
+            {% for message in messages %}
+            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show d-flex align-items-center"
+                role="alert">
+
+                <span class="fs-4 me-2 ms-2">
+                    {% if message.tags == 'success' %}✅{% elif message.tags == 'warning' %}⚠️{% elif message.tags ==
+                    'error' %}⛔{% else %}ℹ️{% endif %}
+                </span>
+
+                <div class="fw-bold">{{ message }}</div>
+
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
         {% block content %}{% endblock %}
+
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 </body>
 
