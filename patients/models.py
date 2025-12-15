@@ -1,5 +1,6 @@
 import uuid
 from django.db import models
+from django.utils import timezone
 
 # Create your models here.
 
@@ -10,5 +11,6 @@ class Patient(models.Model):
     uploaded_at = models.DateTimeField(auto_now_add=True)
     unique_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     phone_number = models.CharField(max_length=11, verbose_name="شماره تماس")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="زمان ایجاد")
     def __str__(self):
         return self.name

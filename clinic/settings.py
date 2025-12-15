@@ -192,5 +192,5 @@ UNFOLD = {
 
 
 SMS_API_KEY = '1Y7Cew52CazJ4SsuIiE3LZaYxofiRZTMconkkUkATpgUbMtM'
-SMS_LINE_NUMBER = 9982008947  # عدد (Integer)
+SMS_LINE_NUMBER = 300021150793  # عدد (Integer)
 SMS_BASE_URL = "https://api.sms.ir/v1/"

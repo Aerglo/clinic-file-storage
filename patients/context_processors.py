@@ -10,7 +10,7 @@ def sms_credit_balance(request):
         
         if response.status_code == 200 and response.json()['status'] == 1:
             credit = response.json()['data']
-            formatted_credit = "{:,.0f}".format(credit / 10)
+            formatted_credit = "{:,}".format(credit)
         else:
             formatted_credit = "---"
             

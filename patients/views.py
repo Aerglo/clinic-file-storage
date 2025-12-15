@@ -10,6 +10,12 @@ from django.urls import reverse
 import requests
 from django.contrib import messages  # این برای نوتیفیکیشن‌هاست
 from django.conf import settings
+from django.shortcuts import render, get_object_or_404
+from django.http import HttpResponse, FileResponse, Http404
+from django.utils import timezone
+from datetime import timedelta
+from django.core.cache import cache
+from django.views.decorators.cache import never_cache
 
 def send_sms_with_sms_ir(phone_number, text_message):
     try:
@@ -55,7 +61,7 @@ def upload_patient_file(request):
             # اینجا از اسم 'secure_download' یا هر اسمی که تو urls.py برای اون ویوی گیت گذاشتی استفاده کن
             # اگه اسم ویوی دانلودت چیز دیگه‌س، اینجا عوضش کن
             full_link = request.build_absolute_uri(
-                reverse('download_gate', args=[new_patient.unique_id])
+                reverse('secure_download', args=[new_patient.unique_id])
             )
             
             # ب) ارسال پیامک (اگر شماره داشت)
@@ -112,20 +118,52 @@ def patient_detail(request, pk):
 
 # views.py
 
+def get_client_ip(request):
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0]
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+    return ip
+
+@never_cache  # ✅ لایه ۱: جلوگیری از ذخیره شدن عکس در مرورگر (کافی‌نت و...)
 def download_gate(request, unique_id):
-    # بیمار رو با اون کد عجیب (UUID) پیدا کن
     patient = get_object_or_404(Patient, unique_id=unique_id)
     
+    # ✅ لایه ۲: انقضای لینک (مثلاً ۳۰ روز بعد از ایجاد)
+    # اگر بیشتر از ۳۰ روز گذشته، بگو صفحه وجود نداره
+    if timezone.now() > patient.created_at + timedelta(days=30):
+        return render(request, 'gate.html', {'error_msg': '⌛ مهلت دسترسی به این پرونده تمام شده است.'})
+
+    # گرفتن IP کاربر
+    user_ip = get_client_ip(request)
+    # ساختن یک کلید اختصاصی برای کش: مثلا block_ip_192.168.1.1_uuid123
+    cache_key = f"block_attempt_{unique_id}_{user_ip}"
+    
+    # ✅ لایه ۳: چک کردن تعداد تلاش‌های ناموفق
+    failed_attempts = cache.get(cache_key, 0)
+    
+    if failed_attempts >= 5:
+        # اگر ۵ بار اشتباه زده بود، بلاک کن
+        return render(request, 'gate.html', {'error_msg': '⛔ دسترسی شما به دلیل تلاش بیش از حد مسدود شد. لطفاً ۱ ساعت دیگر تلاش کنید.'})
+
     error_msg = None
 
     if request.method == 'POST':
         input_code = request.POST.get('national_code')
         
-        # چک کردن رمز (کد ملی)
         if input_code == patient.national_code:
-            # اگه درست بود، بفرستش سمت فایل اصلی
-            return redirect(patient.file.url)
+            # ✅ نکته طلایی (امنیت فایل):
+            # به جای redirect، خود فایل رو مستقیم استریم می‌کنیم.
+            # اینجوری آدرس اصلی فایل (url) توی مرورگر لو نمیره!
+            response = FileResponse(patient.file.open('rb'))
+            # اگه بخوای دانلود نشه و فقط نمایش داده بشه:
+            response['Content-Disposition'] = 'inline' 
+            return response
         else:
+            # اگر اشتباه زد، یکی به شمارنده اضافه کن
+            # زمان قفل شدن: ۳۶۰۰ ثانیه (۱ ساعت)
+            cache.set(cache_key, failed_attempts + 1, 3600)
             error_msg = '⛔ کد ملی اشتباه است!'
 
     return render(request, 'gate.html', {'error_msg': error_msg})
