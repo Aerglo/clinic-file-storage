@@ -4,7 +4,7 @@ from .models import Patient
 class UploadForm(forms.ModelForm):
     class Meta:
         model = Patient
-        # ترتیب فیلدها مهمه: اول مشخصات، بعد شماره، آخر فایل
+        
         fields = ['name', 'national_code', 'phone_number', 'file']
         
         widgets = {
@@ -15,13 +15,13 @@ class UploadForm(forms.ModelForm):
             'national_code': forms.TextInput(attrs={
                 'class': 'form-control', 
                 'placeholder': 'مثلاً: 0012345678',
-                'type': 'tel' # اینم عددی کردم که تو موبایل راحت باشن
+                'type': 'tel' 
             }),
-            # >>>> این بخش جدیده <<<<
+            
             'phone_number': forms.TextInput(attrs={
                 'class': 'form-control',
                 'placeholder': 'مثلاً: 09123456789',
-                'type': 'tel', # نکته طلایی: کیبورد موبایل رو عددی می‌کنه
+                'type': 'tel', 
                 'maxlength': '11'
             }),
             'file': forms.FileInput(attrs={
@@ -42,7 +42,7 @@ class UploadForm(forms.ModelForm):
             }
         }
 
-# فرم ارسال پیامک دستی
+
 class ManualSMSForm(forms.Form):
     phone_number = forms.CharField(
         label="شماره موبایل گیرنده",
@@ -51,7 +51,7 @@ class ManualSMSForm(forms.Form):
             'class': 'form-control',
             'placeholder': '0912...',
             'type': 'tel',
-            'list': 'patient-list' # این خط جادویی برای پیشنهاد شماره‌هاست
+            'list': 'patient-list' 
         })
     )
     message = forms.CharField(

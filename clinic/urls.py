@@ -22,10 +22,10 @@ from django.conf.urls.static import static
 urlpatterns = [
     path('admin/', admin.site.urls),
     
-    # این خط میگه هر چی مربوط به اپلیکیشن تو بود رو بفرست اونور
+    
     path('', include('patients.urls')), 
 ]
 
-# *** نکته حیاتی برای نمایش و آپلود فایل در حالت دولوپ ***
+
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
