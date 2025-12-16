@@ -1,5 +1,7 @@
-dj_database_url==3.0.1
-Django==6.0
+Django==5.0.9
 Requests==2.32.5
+dj-database-url==2.0.0 # این کتابخانه برای خواندن کانفیگ دیتابیس از ENV کمک میکنه
 django-unfold
 django-cleanup
+python-dotenv # برای خواندن متغیرها از فایل .env
+whitenoise==6.6.0
