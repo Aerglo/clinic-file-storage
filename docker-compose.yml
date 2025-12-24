@@ -1,7 +1,6 @@
 services:
   web:
     build: .
-    # نام سرویس دیتابیس (db) و متغیرهای محیطی از .env خوانده می‌شوند
     command: gunicorn clinic.wsgi:application --bind 0.0.0.0:8000
     volumes:
       - .:/app
@@ -10,8 +9,7 @@ services:
     depends_on:
       - db
     env_file:
-      - .env  # اشاره به فایل .env برای خواندن تنظیمات
-    # این خط اضافه شده تا اگر سرور ریست شد، کانتینر هم بالا بیاد
+      - .env
     restart: always 
 
   db:
@@ -19,10 +17,23 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:
-      # متغیرها مستقیم از فایل .env خوانده می‌شوند
       - POSTGRES_DB=${DB_NAME}
       - POSTGRES_USER=${DB_USER}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
-      
+    restart: always
+
+  # --- این بخش رو اضافه کن ---
+  nginx-proxy:
+    image: 'jc21/nginx-proxy-manager:latest'
+    restart: always
+    ports:
+      - '80:80'
+      - '81:81'
+      - '443:443'
+    volumes:
+      - ./nginx_data:/data
+      - ./letsencrypt:/etc/letsencrypt
+
 volumes:
   postgres_data:
+  nginx_data: # این رو هم اضافه کن
