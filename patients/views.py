@@ -7,13 +7,13 @@ from django.urls import reverse
 import requests
 from django.contrib import messages   
 from django.conf import settings
-from django.http import HttpResponse, FileResponse, Http404
+from django.http import FileResponse
 from django.utils import timezone
 from datetime import timedelta
 from django.core.cache import cache
 from django.views.decorators.cache import never_cache
 
-# --- Helper Function: ترجمه کدهای وضعیت به متن فارسی ---
+# --- Helper Function: ترجمه کدهای وضعیت SMS.ir ---
 def get_sms_status_message(status_code):
     status_messages = {
         0: "درخواست شما با خطا مواجه شده‌است.",
@@ -49,10 +49,10 @@ def get_sms_status_message(status_code):
     }
     return status_messages.get(status_code, f"خطای ناشناخته (کد: {status_code})")
 
-# --- SMS Function: بازنویسی شده برای برگرداندن وضعیت دقیق ---
+# --- SMS Function: بهینه شده برای جلوگیری از ارور 400 ---
 def send_sms_with_sms_ir(phone_number, text_message):
     try:
-        url = f"{settings.SMS_BASE_URL}send/bulk"
+        url = f"{settings.SMS_BASE_URL}send"
         
         headers = {
             "X-API-KEY": settings.SMS_API_KEY,  
@@ -60,35 +60,38 @@ def send_sms_with_sms_ir(phone_number, text_message):
             "Accept": "text/plain"
         }
         
+        # پاکسازی شماره موبایل
+        phone = str(phone_number).strip().replace(" ", "")
+        if not phone.startswith('0'):
+            phone = f"0{phone}"
+
         payload = {
             "lineNumber": settings.SMS_LINE_NUMBER, 
             "messageText": text_message,
-            "mobiles": [phone_number],
-            "sendDateTime": None
+            "mobiles": [phone],
+            "sendDateTime": None 
         }
 
         response = requests.post(url, json=payload, headers=headers)
         
-        # اگر کلا به سرور وصل نشد
-        if response.status_code != 200:
-             return False, f"خطای HTTP سمت سرور: {response.status_code}"
-
-        # پردازش جواب جیسون
-        json_data = response.json()
-        status_code = json_data.get('status')
-        status_message = get_sms_status_message(status_code) # دریافت متن فارسی
-        
-        if status_code == 1:
-            print(f"✅ SMS sent via Line {settings.SMS_LINE_NUMBER}")
-            return True, status_message
+        # بررسی وضعیت پاسخ HTTP
+        if response.status_code == 200:
+            json_data = response.json()
+            status_code = json_data.get('status')
+            status_msg = get_sms_status_message(status_code)
+            
+            if status_code == 1:
+                return True, status_msg
+            else:
+                return False, status_msg
         else:
-            print(f"❌ SMS Failed: {status_message}")
-            return False, status_message
+            # در صورت ارور 400 یا سایر خطاها، متن پاسخ سرور را برمی‌گردانیم
+            return False, f"خطای {response.status_code}: {response.text[:100]}"
             
     except Exception as e:
-        print(f"⚠️ Error: {e}")
-        return False, f"خطای سیستمی: {str(e)}"
+        return False, f"خطای ارتباطی: {str(e)}"
 
+# --- Views ---
 
 @login_required
 def upload_patient_file(request):
@@ -104,13 +107,11 @@ def upload_patient_file(request):
             if new_patient.phone_number:
                 msg = f"بیمار گرامی {new_patient.name}،\nنقشه مغزی شما آماده است.\nلینک دریافت:\n{full_link}\nOFF11"
                 
-                # دریافت نتیجه به صورت تاپل (موفقیت، پیام)
                 is_sent, sms_status_msg = send_sms_with_sms_ir(new_patient.phone_number, msg)
                 
                 if is_sent:
                     messages.success(request, f'✅ پرونده ذخیره و پیامک برای {new_patient.name} ارسال شد.')
                 else:
-                    # نمایش متن دقیق خطا
                     messages.warning(request, f'⚠️ پرونده ذخیره شد اما پیامک ارسال نشد. علت: {sms_status_msg}')
             else:
                 messages.success(request, '✅ پرونده با موفقیت ذخیره شد (بدون شماره موبایل).')
@@ -120,7 +121,6 @@ def upload_patient_file(request):
         form = UploadForm()
 
     return render(request, 'upload.html', {'form': form})
-
 
 @login_required
 def patient_list(request):
@@ -136,7 +136,6 @@ def patient_list(request):
     
     return render(request, 'patient_list.html', {'patients': patients})
 
-
 @login_required
 def patient_detail(request, pk):
     patient = get_object_or_404(Patient, pk=pk)
@@ -147,7 +146,6 @@ def patient_detail(request, pk):
         'full_link': full_link
     })
 
-
 def get_client_ip(request):
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
     if x_forwarded_for:
@@ -155,7 +153,6 @@ def get_client_ip(request):
     else:
         ip = request.META.get('REMOTE_ADDR')
     return ip
-
 
 @never_cache  
 def download_gate(request, unique_id):
@@ -186,11 +183,9 @@ def download_gate(request, unique_id):
 
     return render(request, 'gate.html', {'error_msg': error_msg})
 
-
 @login_required
 def update_patient(request, pk):
     patient = get_object_or_404(Patient, pk=pk)
-    
     if request.method == 'POST':
         form = UploadForm(request.POST, request.FILES, instance=patient)
         if form.is_valid():
@@ -198,42 +193,29 @@ def update_patient(request, pk):
             return redirect('patient_detail', pk=patient.pk)
     else:
         form = UploadForm(instance=patient)
-
-    return render(request, 'upload.html', {
-        'form': form, 
-        'title': '✏️ ویرایش پرونده' 
-    })
-
+    return render(request, 'upload.html', {'form': form, 'title': '✏️ ویرایش پرونده'})
 
 @login_required
 def delete_patient(request, pk):
     patient = get_object_or_404(Patient, pk=pk)
-    
     if request.method == 'POST':
         patient.delete()
         return redirect('patient_list')
-        
     return render(request, 'confirm_delete.html', {'patient': patient})
-
 
 @login_required
 def send_manual_sms(request):
     patients = Patient.objects.filter(phone_number__isnull=False).values('name', 'phone_number')
-    
     if request.method == 'POST':
         form = ManualSMSForm(request.POST)
         if form.is_valid():
             phone = form.cleaned_data['phone_number']
             msg = form.cleaned_data['message']
-            
-            # دریافت نتیجه به صورت تاپل (موفقیت، پیام)
             is_sent, sms_status_msg = send_sms_with_sms_ir(phone, msg)
-            
             if is_sent:
                 messages.success(request, f'✅ پیامک با موفقیت به {phone} ارسال شد.')
                 return redirect('send_manual_sms') 
             else:
-                # نمایش متن دقیق خطا
                 messages.error(request, f'⛔ ارسال پیامک با خطا مواجه شد: {sms_status_msg}')
     else:
         form = ManualSMSForm()
