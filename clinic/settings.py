@@ -201,3 +201,5 @@ UNFOLD = {
 SMS_API_KEY = 'nz5gfEzJGnONV0PNmd2iWWmY2n5bTcpuQtxxa6cFMfjBTacZ'
 SMS_LINE_NUMBER = 300021150793  
 SMS_BASE_URL = "https://api.sms.ir/v1/"
+CSRF_TRUSTED_ORIGINS = ['https://neurokowasri.ir', 'https://www.neurokowasri.ir']
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
