@@ -55,9 +55,8 @@ def send_sms_with_sms_ir(phone_number, text_message):
         url = f"{settings.SMS_BASE_URL}send"
         
         headers = {
-            "X-API-KEY": "1Y7Cew52CazJ4SsuIiE3LZaYxofiRZTMconkkUkATpgUbMtM",  
-            "Content-Type": "application/json",
-            "Accept": "text/plain"
+            "x-api-key": "1Y7Cew52CazJ4SsuIiE3LZaYxofiRZTMconkkUkATpgUbMtM",  
+            "Accept": "application/json"
         }
         
         # پاکسازی شماره موبایل
