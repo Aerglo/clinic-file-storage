@@ -52,7 +52,7 @@ def get_sms_status_message(status_code):
 # --- SMS Function: بهینه شده برای جلوگیری از ارور 400 ---
 def send_sms_with_sms_ir(phone_number, text_message):
     try:
-        url = f"{settings.SMS_BASE_URL}send"
+        url = f"{settings.SMS_BASE_URL}send/bulk"
         
         headers = {
             "x-api-key": "1Y7Cew52CazJ4SsuIiE3LZaYxofiRZTMconkkUkATpgUbMtM",  
