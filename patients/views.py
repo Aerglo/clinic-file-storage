@@ -1,10 +1,11 @@
+import time
+import requests
 from django.shortcuts import render, redirect, get_object_or_404
 from .forms import UploadForm, ManualSMSForm
 from django.db.models import Q 
 from .models import Patient
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse
-import requests
 from django.contrib import messages   
 from django.conf import settings
 from django.http import FileResponse
@@ -13,69 +14,97 @@ from datetime import timedelta
 from django.core.cache import cache
 from django.views.decorators.cache import never_cache
 
-# --- Helper Function: ترجمه کدهای وضعیت SMS.ir ---
-def get_sms_status_message(status_code):
+# --- Helper Function: ترجمه وضعیت دلیوری (کدهای جدید) ---
+def get_delivery_status_message(state_code):
     status_messages = {
-        0: "درخواست شما با خطا مواجه شده‌است.",
-        1: "عملیات با موفقیت انجام شد",
-        10: "کلید وب سرویس نامعتبر است",
-        11: "کلید وب سرویس غیرفعال است",
-        12: "کلید وب سرویس محدود به آی‌پی‌های تعریف شده می‌باشد.",
-        13: "حساب کاربری غیرفعال است",
-        14: "حساب کاربری در حالت تعلیق قرار دارد",
-        15: "به منظور استفاده از وب سرویس پلن خود را ارتقا دهید",
-        16: "مقدار ارسالی پارامتر نادرست می‌باشد",
-        20: "تعداد درخواست بیشتر از حد مجاز است",
-        101: "شماره خط نامعتبر میباشد",
-        102: "اعتبار کافی نمیباشد",
-        103: "درخواست شما دارای متن (های) خالی است",
-        104: "درخواست شما دارای موبایل (های) نادرست است",
-        105: "تعداد موبایل ها بیشتر از حد مجاز (100 عدد) میباشد",
-        106: "تعداد متن ها بیشتر از حد مجاز (100 عدد) میباشد",
-        107: "لیست موبایل ها خالی میباشد",
-        108: "لیست متن ها خالی میباشد",
-        109: "زمان ارسال نامعتبر میباشد",
-        110: "تعداد شماره موبایل ها و تعداد متن ها برابر نیستند",
-        111: "با این شناسه ارسالی ثبت نشده است",
-        112: "رکوردی برای حذف یافت نشد",
-        113: "قالب یافت نشد",
-        114: "طول رشته مقدار پارامتر، بیش از حد مجاز (25 کاراکتر) میباشد",
-        115: "شماره موبایل در لیست سیاه سامانه می‌باشد 🚫",
-        116: "نام یک یا چند پارامتر مقداردهی نشده‌است.",
-        117: "متن ارسال شده مورد تایید نمی‌باشد",
-        118: "تعداد پیام ها بیشتر از حد مجاز میباشد",
-        119: "به منظور استفاده از قالب‌ شخصی سازی شده پلن خود را ارتقا دهید",
-        123: "خط ارسال‌کننده نیاز به فعال‌سازی دارد."
+        1: "رسیده",
+        2: "نرسیده به گوشی",
+        3: "رسیده به مخابرات",
+        4: "نرسیده به مخابرات",
+        5: "رسیده به اپراتور",
+        6: "ناموفق",
+        7: "لیست سیاه",
+        8: "نامشخص"
     }
-    return status_messages.get(status_code, f"خطای ناشناخته (کد: {status_code})")
+    return status_messages.get(state_code, f"وضعیت نامشخص (کد: {state_code})")
 
-# --- SMS Function ---
+# --- SMS Function: منطق جدید دو مرحله‌ای ---
 def send_sms_with_sms_ir(phone_number, text_message):
     try:
-        url = f"{settings.SMS_BASE_URL}send/bulk"
-        headers = {
-            "x-api-key": settings.SMS_API_KEY,  
-            "Accept": "application/json"
-        }
+        # اصلاح فرمت شماره موبایل
         phone = str(phone_number).strip().replace(" ", "")
         if not phone.startswith('0'):
             phone = f"0{phone}"
 
-        payload = {
-            "lineNumber": settings.SMS_LINE_NUMBER, 
-            "messageText": text_message,
-            "mobiles": [phone],
-            "sendDateTime": None 
+        # ---------------------------------------------------------
+        # مرحله اول: ارسال درخواست و دریافت شناسه پیام (MessageId)
+        # ---------------------------------------------------------
+        
+        # فرض بر این است که BASE_URL شما "https://api.sms.ir/v1/" است
+        url_send = f"{settings.SMS_BASE_URL}send"
+        
+        params = {
+            "username": settings.SMS_USERNAME,
+            "password": settings.SMS_API_KEY,  # طبق گفته شما پسورد همان API KEY است
+            "line": settings.SMS_LINE_NUMBER,
+            "mobile": phone,
+            "text": text_message
         }
-        response = requests.post(url, json=payload, headers=headers)
-        if response.status_code == 200:
-            json_data = response.json()
-            status_code = json_data.get('status')
-            status_msg = get_sms_status_message(status_code)
-            return (True if status_code == 1 else False), status_msg, status_code
-        return False, f"خطای HTTP {response.status_code}", -1
+
+        # ارسال درخواست اولیه (GET)
+        response = requests.get(url_send, params=params)
+        
+        if response.status_code != 200:
+            return False, f"خطای HTTP در مرحله اول: {response.status_code}", -1
+
+        json_data = response.json()
+        
+        # اگر استاتوس 1 نباشد یعنی درخواست اولیه هم فیل شده
+        if json_data.get('status') != 1:
+            return False, json_data.get('message', 'خطا در ارسال اولیه'), -1
+
+        # دریافت messageId از پاسخ
+        message_id = json_data.get('data', {}).get('messageId')
+        
+        if not message_id:
+            return False, "شناسه پیام (messageId) دریافت نشد", -1
+
+        # ---------------------------------------------------------
+        # مرحله دوم: وقفه (Delay)
+        # ---------------------------------------------------------
+        time.sleep(2)
+
+        # ---------------------------------------------------------
+        # مرحله سوم: استعلام وضعیت دلیوری با MessageId
+        # ---------------------------------------------------------
+        url_check = f"{settings.SMS_BASE_URL}send/{message_id}"
+        
+        headers = {
+            "x-api-key": settings.SMS_API_KEY,
+            "Accept": "application/json"
+        }
+
+        response_check = requests.get(url_check, headers=headers)
+        
+        if response_check.status_code != 200:
+            # اگر پیامک ارسال شده ولی استعلام خطا داد، موفق در نظر می‌گیریم (با هشدار)
+            return True, "پیام ارسال شد اما استعلام وضعیت نهایی خطا داشت.", 1
+
+        json_check = response_check.json()
+        delivery_data = json_check.get('data', {})
+        
+        # دریافت وضعیت دلیوری
+        delivery_state = delivery_data.get('deliveryState')
+        status_msg = get_delivery_status_message(delivery_state)
+
+        # موفقیت: رسیده (1)، رسیده به مخابرات (3)، رسیده به اپراتور (5)
+        # شکست: لیست سیاه (7) و بقیه موارد
+        is_success = True if delivery_state in [1, 3, 5] else False
+        
+        return is_success, status_msg, delivery_state
+
     except Exception as e:
-        return False, str(e), -1
+        return False, f"خطای سیستمی: {str(e)}", -1
 
 # --- Views ---
 
@@ -88,10 +117,12 @@ def upload_patient_file(request):
             full_link = request.build_absolute_uri(reverse('secure_download', args=[new_patient.unique_id]))
             if new_patient.phone_number:
                 msg = f"بیمار گرامی {new_patient.name}،\nنقشه مغزی شما آماده است.\nلینک دریافت:\n{full_link}\nOFF11"
+                
                 is_sent, sms_status_msg, s_code = send_sms_with_sms_ir(new_patient.phone_number, msg)
+                
                 if is_sent:
                     messages.success(request, f'✅ پرونده ذخیره و پیامک برای {new_patient.name} ارسال شد.')
-                elif s_code == 115:
+                elif s_code == 7:  # کد 7 = لیست سیاه
                     messages.warning(request, f'⚠️ پرونده ذخیره شد اما شماره در لیست سیاه مخابرات است.')
                 else:
                     messages.warning(request, f'⚠️ پرونده ذخیره شد اما پیامک ارسال نشد: {sms_status_msg}')
@@ -123,7 +154,7 @@ def get_client_ip(request):
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
     return x_forwarded_for.split(',')[0] if x_forwarded_for else request.META.get('REMOTE_ADDR')
 
-@never_cache  
+@never_cache   
 def download_gate(request, unique_id):
     patient = get_object_or_404(Patient, unique_id=unique_id)
     if timezone.now() > patient.created_at + timedelta(days=30):
@@ -172,10 +203,12 @@ def send_manual_sms(request):
         if form.is_valid():
             phone = form.cleaned_data['phone_number']
             msg = form.cleaned_data['message']
+            
             is_sent, sms_status_msg, s_code = send_sms_with_sms_ir(phone, msg)
+            
             if is_sent:
                 messages.success(request, f'✅ پیامک به {phone} ارسال شد.')
-            elif s_code == 115:
+            elif s_code == 7: # کد 7 = لیست سیاه
                 messages.error(request, f'⛔ شماره در لیست سیاه مخابرات است.')
             else:
                 messages.error(request, f'⛔ خطا: {sms_status_msg}')
